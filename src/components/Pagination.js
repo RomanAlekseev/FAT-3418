@@ -30,17 +30,12 @@ export default function Pagination(props) {
             </a>
           </li>
         )}
-        <li
-          className={
-            props.currentPage === 1 ? "page-item disabled" : "page-item"
-          }
-        >
+        <li className={props.currentPage === 1 ? "page-item disabled" : "page-item"}>
           <a
             className="page-link"
             href="#"
             tab-index="-1"
-            onClick={props.changeCurrentPage}
-          >
+            onClick={props.changeCurrentPage}>
             Previous
           </a>
         </li>
@@ -50,11 +45,11 @@ export default function Pagination(props) {
               <li
                 key={item}
                 className={
-                  item === props.currentPage ? "page-item active" : "page-item"
+                  item === props.currentPage ? "page-item active pagination-number" : "page-item pagination-number"
                 }
               >
                 <a
-                  className="page-link"
+                  className="page-link text-center"
                   href="#"
                   onClick={props.changeCurrentPage}
                 >

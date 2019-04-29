@@ -55,3 +55,6 @@ h2 + nav{
     text-decoration: none;
     text-shadow: 3px 3px 3px #f4ce42;
 }
+.pagination-number{
+    min-width: 2.5rem;
+}

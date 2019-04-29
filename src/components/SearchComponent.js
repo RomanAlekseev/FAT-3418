@@ -1,85 +1,83 @@
 import * as React from "react";
 import Display from "./Display";
+import FilterItem from "./FilterItem";
+
+import {compose, filterAge, filterGender, filterName, filterWorkFor} from "../utilits/utils"
 
 class FilterComponent extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      gender: "all",
+      gender: "not specifed",
       name: "",
       ageFrom: 18,
       ageTo: 40,
-      boss: "",
-      users: []
+      company: "",
+      users: this.props.users,
+      //State for Pagination Перенёс из Display думаю нужно будет перенести на Redux
+      currentPage: 1
     };
-    this.onChange = this.onChange.bind(this);
-    this.filterByAge = this.filterByAge.bind(this);
-    this.filterByName = this.filterByName.bind(this);
-    this.filterByBoss = this.filterByBoss.bind(this);
-    this.filterStart = this.filterStart.bind(this);
+    this.top = React.createRef();
   }
-  filterStart() {
-    let arr = this.props.users;
-    let from = this.state.ageFrom;
-    let to = this.state.ageTo;
-    let gender = this.state.gender;
-    let pattern = new RegExp("\\b" + this.state.name, "gi");
-    let pattern2 = new RegExp("\\b" + this.state.boss, "gi");
-    let newArr =
-      gender === "female"
-        ? arr.filter(function(person) {
-            return (
-              person.gender === "female" &&
-              person.name.match(pattern) &&
-              person.company.match(pattern2) &&
-              person.age >= from &&
-              person.age <= to
-            );
-          })
-        : gender === "male"
-        ? arr.filter(function(person) {
-            return (
-              person.gender === "male" &&
-              person.name.match(pattern) &&
-              person.company.match(pattern2) &&
-              person.age >= from &&
-              person.age <= to
-            );
-          })
-        : arr.filter(function(person) {
-            return (
-              person.name.match(pattern) && person.company.match(pattern2) && person.age >= from && person.age <= to
-            );
-          });
-    this.setState({ users: newArr });
+    
+//Переписал как compose: 
+  filterStart = () => {
+    this.setState({currentPage: 1}); 
+    const user = this.state;
+    let result = compose(
+      [filterWorkFor(user.company),
+      filterAge(user.ageFrom, user.ageTo),
+      filterGender(user.gender),
+      filterName(user.name)],
+      this.props.users,
+    );
+    this.setState({ users: result });
+  } 
+//Scroll at top
+  scroll = () => {
+    this.top.current.scrollIntoView({behavior: 'smooth'})
+  }
+//Find the last page
+ lastPage = () => {
+      const page = this.state.users.length / 24;
+      return Math.ceil(page);
+  }
+
+//Events & Parameters block
+ changeCurrentPage = (e) => {
+      e.preventDefault();
+      this.scroll();
+      const value = (e.target['innerHTML']);
+      if(value === "Next"){
+        this.setState((prevState) => ({
+          currentPage: ++prevState.currentPage
+        }))
+      } else if(value === "Previous"){
+        this.setState((prevState) => ({
+          currentPage: --prevState.currentPage
+        }))
+      } else if(value === "to the first"){
+           this.setState({currentPage: 1});     
+      } else if(value === "to the last"){
+           this.setState({currentPage: this.lastPage()});     
+      } else{
+          this.setState({currentPage: parseInt(value)});
+      }
   }
   onChange = e => {
     let target = e.target.id;
-    if (target === "all") {
-      return this.setState(
-        {
-          gender: "all"
-        },
-        () => this.filterStart()
+    if (target === "not specifed") {
+      return this.setState({
+          gender: "not specifed"
+        },() => this.filterStart()
       );
     }
-    // let arr = this.props.users;
-    // let newArr =
-    //   e.target.id === "male"
-    //     ? arr.filter(function(person) {
-    //         return person.gender === "male";
-    //       })
-    //     : arr.filter(function(person) {
-    //         return person.gender === "female";
-    //       });
-    this.setState(
-      {
+    this.setState({
         gender: target
-      },
-      () => this.filterStart()
-    );
-  };
-  filterByAge(e) {
+      }, () => this.filterStart());
+  }
+  
+  setAgeParametr = (e) => {
     let from = this.state.ageFrom;
     let to = this.state.ageTo;
     if (e.target.id === "from") {
@@ -90,48 +88,35 @@ class FilterComponent extends React.Component {
           ? e.target.value
           : this.state.ageFrom;
     }
-    this.setState(
-      {
+    this.setState({
         ageFrom: from,
         ageTo: to
-      },
-      () => this.filterStart()
-    );
+      }, () => this.filterStart());
   }
-  filterByName(e) {
+  
+  setNameParametr = (e) => {
     const value = e.target.value;
-    // let arr = this.props.users;
-    // //console.log(value);
-    // let newUsers = [];
-    // let pattern = new RegExp("\\b" + value, "gi");
-    // this.props.users.map((item, i) => {
-    //   item.name.match(pattern) ? newUsers.push(arr[i]) : null;
-    // });
-    this.setState(
-      {
+    this.setState({ 
         name: value
-      },
-      () => this.filterStart()
-    );
+    }, () => this.filterStart());
   }
-  filterByBoss(e){
+  
+  setWorkParametr = (e) => {
     const value = e.target.value;
-    this.setState(
-      {
-        boss: value
-      },
-      () => this.filterStart()
-    );
+    this.setState({
+        company: value
+      }, () => this.filterStart());
   }
+  
   componentDidMount() {
     this.props
-      .fetchUsers("http://www.mocky.io/v2/5cab54d63000007e19904ac6")
+      .fetchUsers()
       .then(() => this.setState({ users: this.props.users }));
   }
   render() {
     return (
-      <div className="container">
-        <form>
+      <div className="container" ref={this.top}>
+        <form className="mb-2">
           <div className="form-group">
             <input
               className="mt-5 col-12"
@@ -139,73 +124,28 @@ class FilterComponent extends React.Component {
               name="filterInput"
               type="text"
               placeholder="Search"
-              onChange={this.filterByName}
+              onChange={this.setNameParametr}
             />
           </div>
           <div className="form-row small d-flex justify-content-between text-left text-lg-center">
             <div className="form-group text-left px-1 col-4">
-              <div className="form-check form-check-inline">
-                <input
-                  className="form-check-input d-none"
-                  type="checkbox"
-                  name="male"
-                  checked={this.state.male}
-                  onChange={this.onChange}
-                  id="male"
-                />
-                <label
-                  className={
-                    this.state.gender !== "male"
-                      ? "form-check-label text-muted"
-                      : "form-check-label"
-                  }
-                  htmlFor="male"
-                >
-                  male
-                </label>
-                <span className="pl-2">/</span>
-              </div>
-              <div className="form-check form-check-inline">
-                <input
-                  className="form-check-input d-none"
-                  type="checkbox"
-                  id="female"
-                  name="female"
-                  checked={this.state.female}
-                  onChange={this.onChange}
-                />
-                <label
-                  className={
-                    this.state.gender !== "female"
-                      ? "form-check-label text-muted"
-                      : "form-check-label"
-                  }
-                  htmlFor="female"
-                >
-                  female
-                </label>
-                <span className="pl-2">/</span>
-              </div>
-              <div className="form-check form-check-inline">
-                <input
-                  className="form-check-input d-none"
-                  type="checkbox"
-                  id="all"
-                  name="every"
-                  checked={this.state.male || this.state.female ? false : true}
-                  onChange={this.onChange}
-                />
-                <label
-                  className={
-                    this.state.gender !== "all"
-                      ? "form-check-label text-muted"
-                      : "form-check-label"
-                  }
-                  htmlFor="all"
-                >
-                  not specifed
-                </label>
-              </div>
+              <FilterItem
+                name="male"
+                onChange={this.onChange}
+                gender={this.state.gender}
+                divider="true"
+              />
+              <FilterItem
+                name="female"
+                onChange={this.onChange}
+                gender={this.state.gender}
+                divider="true"
+              />
+            <FilterItem
+                name="not specifed"
+                onChange={this.onChange}
+                gender={this.state.gender}
+              />
             </div>
             <div className="form-group col-sm-5">
               <label htmlFor="from">age from</label>
@@ -216,7 +156,7 @@ class FilterComponent extends React.Component {
                 id="from"
                 className="mx-1 px-1"
                 style={{ width: "50px" }}
-                onChange={this.filterByAge}
+                onChange={this.setAgeParametr}
                 defaultValue="18"
               />
               <label htmlFor="to">to</label>
@@ -227,7 +167,7 @@ class FilterComponent extends React.Component {
                 id="to"
                 className="ml-1 px-1"
                 style={{ width: "50px" }}
-                onChange={this.filterByAge}
+                onChange={this.setAgeParametr}
                 defaultValue="40"
               />
             </div>
@@ -235,11 +175,17 @@ class FilterComponent extends React.Component {
               <label className="ml-sm-auto pt-2" htmlFor="work">
                 works for
               </label>
-              <input type="text" id="work" className="mx-1 col-3 px-1" onChange={this.filterByBoss}/>
+              <input type="text" id="work" className="mx-1 col-3 px-1" onChange={this.setWorkParametr}/>
             </div>
           </div>
         </form>
-        <Display users={this.state.users} />
+        <Display
+         users={this.state.users}
+         isLoading={this.props.isLoading}
+         currentPage={this.state.currentPage}
+         changeCurrentPage={this.changeCurrentPage}
+         scroll={this.scroll}
+         lastPage={this.lastPage}/>
       </div>
     );
   }

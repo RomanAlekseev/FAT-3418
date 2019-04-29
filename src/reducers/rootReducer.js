@@ -1,15 +1,15 @@
-import { RECEIVE_USERS } from "../constants/actionTypes";
-
 const initialState = {
-  users: ["Loading"]
+  users: [],
+  isLoading: true
 };
 
 export default function rootReducer(state = initialState, action) {
   switch (action.type) {
-    case RECEIVE_USERS:
+    case 'RECEIVE_USERS':
       return {
         ...state,
-        users: action.payload
+        users: action.payload,
+        isLoading: false
       };
     default:
       return state;
